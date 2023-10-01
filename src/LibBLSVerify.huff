@@ -1,0 +1,57 @@
+//! # BLS Signature Verification Library
+//!
+//! This library provides functions to verify BLS signatures
+
+/// The generator point for G_1
+#define constant G1_X = 1
+#define constant G1_Y = 2
+
+/// The generator point for G_2. Because this is in a 2-degree extension field, each coordinate has two values.
+#define constant G2_X_1 = 11559732032986387107991004021392285783925812861821192530917403151452391805634
+#define constant G2_X_2 = 10857046999023057135944570762232829481370756359578518086990519993285655852781
+#define constant G2_Y_1 = 4082367875863433681332203403145435568316851327593401208105741076214120093531
+#define constant G2_Y_2 = 8495653923123431417604973247489272438418190587263600148770280649306958101930
+
+/// ## BLS Signature Verification
+///
+/// Verifies that the `signature` is valid for the `message_hash` with respect to the `pubkey`.
+/// This method uses the Ethereum beacon chain style of BLS, which means that:
+///     1. Public keys are points in G1
+///     2. The message hash functions maps to a point in G2 (called `signed_point`)
+///     3. The signature is a point in G2
+/// Because the BLS scheme works by signing a G2 point, we call this `signed_point` as technically it
+/// does not need to be a message hash
+/// 
+/// This macro is passed a memory pointer, which should be an array of size 12 with the following structure:
+///     [0]:    empty
+///     [1]:    empty
+///     [2]:    signature_x_1
+///     [3]:    signature_x_2
+///     [4]:    signature_y_1
+///     [5]:    signature_y_2
+///     [6]:    pubkey_x
+///     [7]:    pubkey_y
+///     [8]:    signed_point_x_1
+///     [9]:    signed_point_x_2
+///     [10]:   signed_point_y_1
+///     [11]:   signed_point_y_2
+///
+/// free_ptr points to an area of memory that this macro will TODO
+#define macro BLS_VERIFY(free_ptr) = takes (1) returns (0) {
+    // takes:       // [bls_mem_ptr]
+    [G1_X]          // [G1_x, bls_mem_ptr]
+    dup2            // [bls_mem_ptr, G1_x, bls_mem_ptr]
+    mstore          // [bls_mem_ptr]
+    [G1_Y]          // [G1_y, bls_mem_ptr]
+    dup2            // [bls_mem_ptr, G1_y, bls_mem_ptr]
+    0x20 add        // [bls_mem_ptr+32, G1_y, bls_mem_ptr]
+    mstore          // [bls_mem_ptr]
+    0x20            // [0x20, bls_mem_ptr]
+    <free_ptr>      // [free_ptr, 0x20, bls_mem_ptr]
+    0x180           // [0x180, free_ptr, 0x020, bls_mem_ptr]
+    dup4            // [bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
+    0x08            // [pairing_address, bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
+    gas             // [gas, pairing_address, bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
+    staticcall      // [success, bls_mem_ptr]
+}
+
