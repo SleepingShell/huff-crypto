@@ -1,23 +1,30 @@
 //! # BLS Signature Verification Library
 //!
 //! This library provides functions to verify BLS signatures
+//! Due to the limitation of EVM ec precompiles, we cannot perform the message hashing on-chain
 
 /// The generator point for G_1
-#define constant G1_X = 1
-#define constant G1_Y = 2
+#define constant G1_X = 0x01
+#define constant G1_Y = 0x02
 
 /// The generator point for G_2. Because this is in a 2-degree extension field, each coordinate has two values.
-#define constant G2_X_1 = 11559732032986387107991004021392285783925812861821192530917403151452391805634
-#define constant G2_X_2 = 10857046999023057135944570762232829481370756359578518086990519993285655852781
-#define constant G2_Y_1 = 4082367875863433681332203403145435568316851327593401208105741076214120093531
-#define constant G2_Y_2 = 8495653923123431417604973247489272438418190587263600148770280649306958101930
+#define constant G2_X_1 = 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2
+#define constant G2_X_2 = 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed
+#define constant G2_Y_1 = 0x90689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b
+#define constant G2_Y_2 = 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa
+
+/// The contract addresses of the precompiles
+#define constant ECADD_ADDRESS = 0x06
+#define constant ECMUL_ADDRESS = 0x07
+#define constant PAIRING_ADDRESS = 0x08
+
 
 /// ## BLS Signature Verification
 ///
 /// Verifies that the `signature` is valid for the `message_hash` with respect to the `pubkey`.
 /// This method uses the Ethereum beacon chain style of BLS, which means that:
 ///     1. Public keys are points in G1
-///     2. The message hash functions maps to a point in G2 (called `signed_point`)
+///     2. The message hash function maps to a point in G2 (called `signed_point`)
 ///     3. The signature is a point in G2
 /// Because the BLS scheme works by signing a G2 point, we call this `signed_point` as technically it
 /// does not need to be a message hash
@@ -38,20 +45,91 @@
 ///
 /// free_ptr points to an area of memory that this macro will TODO
 #define macro BLS_VERIFY(free_ptr) = takes (1) returns (0) {
-    // takes:       // [bls_mem_ptr]
-    [G1_X]          // [G1_x, bls_mem_ptr]
-    dup2            // [bls_mem_ptr, G1_x, bls_mem_ptr]
-    mstore          // [bls_mem_ptr]
-    [G1_Y]          // [G1_y, bls_mem_ptr]
-    dup2            // [bls_mem_ptr, G1_y, bls_mem_ptr]
-    0x20 add        // [bls_mem_ptr+32, G1_y, bls_mem_ptr]
-    mstore          // [bls_mem_ptr]
-    0x20            // [0x20, bls_mem_ptr]
-    <free_ptr>      // [free_ptr, 0x20, bls_mem_ptr]
-    0x180           // [0x180, free_ptr, 0x020, bls_mem_ptr]
-    dup4            // [bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
-    0x08            // [pairing_address, bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
-    gas             // [gas, pairing_address, bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
-    staticcall      // [success, bls_mem_ptr]
+    // takes:           // [bls_mem_ptr]
+    [G1_X]              // [G1_x, bls_mem_ptr]
+    dup2                // [bls_mem_ptr, G1_x, bls_mem_ptr]
+    mstore              // [bls_mem_ptr]
+    [G1_Y]              // [G1_y, bls_mem_ptr]
+    dup2                // [bls_mem_ptr, G1_y, bls_mem_ptr]
+    0x20 add            // [bls_mem_ptr+0x20, G1_y, bls_mem_ptr]
+    mstore              // [bls_mem_ptr]
+    0x20                // [0x20, bls_mem_ptr]
+    <free_ptr>          // [free_ptr, 0x20, bls_mem_ptr]
+    0x180               // [0x180, free_ptr, 0x020, bls_mem_ptr]
+    dup4                // [bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
+    [PAIRING_ADDRESS]   // [pairing_address, bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
+    gas                 // [gas, pairing_address, bls_mem_ptr, 0x180, free_ptr, 0x20, bls_mem_ptr]
+    staticcall          // [success, bls_mem_ptr]
 }
 
+/// ## Public Key Aggregation
+///
+/// Aggregates a number of G1 public keys into a single key.
+///
+/// Memory should be structured as: [key0_x, key0_y, ..., keyi_x, keyi_y]
+///
+/// All public keys are assumed to be valid in G1. This will simply ECC add each key
+///
+/// NOTE: This macro will overwrite the first entry of the array with the aggregated key and
+///         the second entry for calldata.
+///
+#define macro AGGREGATE_KEYS() = takes(2) returns (1) {
+    // takes:           // [mem_ptr, num_keys]
+    swap1               // [num_keys, mem_ptr]
+    //dup2                // [mem_ptr, num_keys, mem_ptr]
+    0x01                // [counter, num_keys, mem_ptr]
+
+    loop:               // [counter, num_keys, mem_ptr]
+        // Check if we have exhausted the key list
+        dup2            // [num_keys, counter, num_keys, mem_ptr]
+        dup2            // [counter, num_keys, counter, num_keys, mem_ptr]
+        eq              // [num_keys == counter, counter, num_keys, mem_ptr]
+        done            // [done_pc, num_keys == counter, counter, num_keys, mem_ptr]
+        jumpi           // [counter, num_keys, mem_ptr]
+
+        // Load the next key
+        dup1            // [counter, counter, num_keys, mem_ptr]
+        0x20 mul        // [counter*0x20, counter, num_keys, mem_ptr]
+        dup4            // [mem_ptr, counter, counter, num_keys, mem_ptr]
+        add             // [key_i_ptr_x, counter, num_keys, mem_ptr]
+        dup1            // [key_i_ptr_x, key_i_ptr_x, counter, num_keys, mem_ptr]
+        0x20 add        // [key_i_ptr_y, key_i_ptr_x, counter, num_keys, mem_ptr]
+        mload           // [key_i_y, key_i_ptr_x, counter, num_keys, mem_ptr]
+        swap1           // [key_i_ptr_x, key_i_y, counter, num_keys, mem_ptr]
+        mload           // [key_i_x, key_i_y, counter, num_keys, mem_ptr]
+
+        // Store the next key at mem_ptr+0x40
+        dup5            // [mem_ptr, key_i_x, key_i_y, counter, num_keys, mem_ptr]
+        0x40 add        // [mem_ptr+0x40, key_i_x, key_i_y, counter, num_keys, mem_ptr]
+        dup1            // [mem_ptr+0x40, mem_ptr+0x40, key_i_x, key_i_y, counter, num_keys, mem_ptr]
+        0x20 add        // [mem_ptr+0x60, mem_ptr+0x40, key_i_x, key_i_y, counter, num_keys, mem_ptr]
+        swap2           // [key_i_x, mem_ptr+0x40, mem_ptr+0x60, key_i_y, counter, num_keys, mem_ptr]
+        swap1           // [mem_ptr+0x40, key_i_x, mem_ptr+0x60, key_i_y, counter, num_keys, mem_ptr]
+        mstore          // [mem_ptr+0x60, key_i_y, counter, num_keys, mem_ptr]
+        mstore          // [counter, num_keys, mem_ptr]
+
+        // Increment the counter
+        0x01 add        // [counter, num_keys, mem_ptr]
+
+        // Perform the ECC addition
+        0x40            // [0x40, counter, num_keys, mem_ptr]
+        dup4            // [mem_ptr, 0x40, counter, num_keys, mem_ptr]
+        0x80            // [0x80, mem_ptr, 0x40, counter, num_keys, mem_ptr]
+        dup2            // [mem_ptr, 0x80, mem_ptr, 0x40, counter, num_keys, mem_ptr]
+        [ECADD_ADDRESS] // [ecadd_address, mem_ptr, 0x80, mem_ptr, 0x40, counter, num_keys, mem_ptr]
+        gas             // [gas, ecadd_address, mem_ptr, 0x80, mem_ptr, 0x40, counter, num_keys, mem_ptr]
+        staticcall      // [success, counter, num_keys, mem_ptr]
+        staticcall      // [loop_pc, success, counter, num_keys, mem_ptr]
+        jumpi           // [counter, num_keys, mem_ptr]
+
+    // The EC addition did not return successful
+    0x00 0x00 revert
+
+    done:               // [counter, num_keys, mem_ptr]
+        pop pop         // [mem_ptr]
+        dup1            // [mem_ptr, mem_ptr]
+        0x20 add        // [mem_ptr+0x20, mem_ptr]
+        mload           // [aggregated_y, mem_ptr]
+        swap1           // [mem_ptr, aggregated_y]
+        mload           // [aggregated_x, aggregated_y]
+}
