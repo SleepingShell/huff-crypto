@@ -2,7 +2,7 @@
 
 This project is created for the Huff Huffathon
 
-The first implementation is verifying BLS signatures
+The first implementation is verifying BLS signatures and aggregating public keys. The idea is one can verify that a collection of public keys aggregates to the public key checked against a signed message.
 
 ## Disclaimer
 
