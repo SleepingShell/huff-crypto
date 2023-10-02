@@ -48,6 +48,7 @@ contract BLSVerifierTest is Test {
     });
 
     assert(verifier.verify_signature(signature, public_key, message));
+    assert(!verifier.verify_signature(message, public_key, signature));
   }
 
   function testKeyAggregation() public {
