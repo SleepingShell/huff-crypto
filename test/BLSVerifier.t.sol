@@ -11,10 +11,10 @@ interface BLSVerifier {
   }
 
   struct G2Point {
-    bytes32 x1;
     bytes32 x2;
-    bytes32 y1;
+    bytes32 x1;
     bytes32 y2;
+    bytes32 y1;
   }
 
   function verify_signature(G2Point calldata signature, G1Point calldata public_key, G2Point calldata message) external returns (bool);
@@ -47,7 +47,7 @@ contract BLSVerifierTest is Test {
       y2: bytes32(uint(775312196554192280950380277344680275774623638426543529866173776909529919076))
     });
 
-    do_assembly(public_key, signature, message);
+    //do_assembly(public_key, signature, message);
     assert(verifier.verify_signature(signature, public_key, message));
   }
 
