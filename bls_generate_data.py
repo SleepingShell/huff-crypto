@@ -15,6 +15,9 @@ pub1 = multiply(G1, priv1)
 priv2 = 700000
 pub2 = multiply(G1, priv2)
 
+priv3 = 88888888888888
+pub3 = multiply(G1, priv3)
+
 # For test purposes we don't actually hash the message, we are simply signing a point. So we generate a random one
 message_point = multiply(G2, 6969)
 sig1 = multiply(message_point, priv1)
@@ -25,9 +28,12 @@ print_as_array("pub1", pub1)
 print_as_array("sig1", sig1)
 print_as_array("pub2", pub2)
 print_as_array("sig2", sig2)
+print_as_array("pub3", pub3)
 
 print_as_array("Agg pub", add(pub1, pub2))
 print_as_array("Agg sig", add(sig1, sig2))
+
+print_as_array("3 agg pub", add(add(pub1, pub2), pub3))
 
 
 print(pairing(sig1, G1) == pairing(message_point, pub1))
