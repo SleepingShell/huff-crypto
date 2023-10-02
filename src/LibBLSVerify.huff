@@ -6,9 +6,9 @@
 
 #define error PairingFailed()
 
-/// The generator point for G_1
+/// The NEGATED generator point for G_1
 #define constant G1_X = 0x01
-#define constant G1_Y = 0x02
+#define constant G1_Y = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd45
 
 /// The generator point for G_2. Because this is in a 2-degree extension field, each coordinate has two values.
 #define constant G2_X_1 = 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2
@@ -47,7 +47,12 @@
 ///     [11]:   signed_point_y_2
 ///
 /// Checks that: e(G1, signature) == e(pubkey, signed_point)
-/// RETURNS:  whether the pairing was valid
+///
+/// Since the precompile checks that all arguments multiplied together equal 0, we do:
+///     e(-G1, signature) * e(pubkey, signed_point) == 0
+///
+///
+/// RETURNS: whether the pairing was valid (and bubbles up if it reverts)
 #define macro BLS_VERIFY() = takes (1) returns (1) {
     // takes:           // [bls_mem_ptr]
 

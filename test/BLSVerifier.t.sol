@@ -47,7 +47,6 @@ contract BLSVerifierTest is Test {
       y2: bytes32(uint(775312196554192280950380277344680275774623638426543529866173776909529919076))
     });
 
-    //do_assembly(public_key, signature, message);
     assert(verifier.verify_signature(signature, public_key, message));
   }
 
@@ -73,33 +72,5 @@ contract BLSVerifierTest is Test {
     BLSVerifier.G1Point memory result = verifier.aggregate_keys(keys);
     assertEq(aggregate.x, result.x);
     assertEq(aggregate.y, result.y);
-  }
-
-  function do_assembly(BLSVerifier.G1Point memory g1, BLSVerifier.G2Point memory g2, BLSVerifier.G2Point memory message) public {
-    bytes32[12] memory input;
-    input[0] = bytes32(uint(1));
-    input[1] = bytes32(uint(2));
-    input[2] = g2.x2;
-    input[3] = g2.x1;
-    input[4] = g2.y2;
-    input[5] = g2.y1;
-
-    input[6] = g1.x;
-    input[7] = g1.y;
-    input[8] = message.x2;
-    input[9] = message.x1;
-    input[10] = message.y2;
-    input[11] = message.y1;
-
-    assembly {
-      if iszero(
-        staticcall(not(0), 0x08, input, 0x0180, input, 0x20)
-      ) {
-        revert(0, 0)
-      }
-    }
-
-    console.log("ASSEMBLY RET");
-    console.log(uint(input[0]));
   }
 }
