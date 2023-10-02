@@ -1,0 +1,62 @@
+//! # BLSVerifier contract
+//!
+//! This contract provides exposed methods to verify an aggregated BLS signature
+#include "./LibBLSVerify.huff"
+
+/// Function definitions
+// This method verifies a BLS signature on the given `message`. NOTE that `message` is the actual signed point,
+//  NOT the preimage to the hash normally used in BLS
+//#define function verify_signature(bytes32[4] signature, bytes32[2] public_key, bytes32[4] message) nonpayable returns (bool)
+//#define function aggregate_keys(bytes32[2][] keys) nonpayable returns (bytes32[2])
+
+// Unfortunately Huff cannot handle struct function definitions. Therefore we must set the selector manually
+#define constant _SIG_VERIFY_SIGNATURE = 0xdb002362
+#define constant _SIG_AGGREGATE_KEYS = 0x01
+
+/// ## Main
+///
+/// Dispatches functions
+#define macro MAIN() = takes(0) returns (0) {
+    0x00 calldataload 0xE0 shr            // [func_sig]
+
+    dup1 [_SIG_VERIFY_SIGNATURE] eq verify_sig jumpi
+    dup1 __FUNC_SIG(aggregate_keys) eq aggregate_keys jumpi
+
+    0x00 0x00 return // Fallback
+
+    verify_sig:
+        VERIFY_SIG_ENTRYPOINT()
+    aggregate_keys:
+        AGGREGATE_KEYS_ENTRYPOINT()
+}
+
+/// ## Verify Signature Entrypoint
+///
+/// Loads all the information from calldata, calls the BLS_VERIFY library function and returns the result of this context
+#define macro VERIFY_SIG_ENTRYPOINT() = takes(0) returns (0) {
+    // Load the calldata into memory
+    0x140               // [0x140]
+    0x04                // [0x04, 0x140]
+    0x40                // [0x40, 0x04, 0x140]
+    calldatacopy        // []
+
+    0x00                // [0x00]
+    BLS_VERIFY()        // [result]
+    0x00 mstore         // []
+    0x20 0x00 return    // []
+}
+
+/// ## Aggregate keys entrypoint
+///
+/// Loads all the points from calldata, calls the AGGREGATE_KEYS library functions and returns the aggregate point
+#define macro AGGREGATE_KEYS_ENTRYPOINT() = takes(0) returns (0) {
+    0x24 calldataload       // [num_keys]
+    dup1                    // [num_keys, num_keys]
+    0x40 mul                // [num_key_bytes, num_keys]
+    0x44                    // [0x24, num_key_bytes, num_keys]
+    0x00                    // [0x00, 0x24, num_key_bytes, num_keys]
+    calldatacopy            // [num_keys]
+    0x00                    // [0x00, num_keys]
+    AGGREGATE_KEYS()        // []
+    0x40 0x00 return        // []
+}
