@@ -18,7 +18,7 @@ interface BLSVerifier {
   }
 
   function verify_signature(G2Point calldata signature, G1Point calldata public_key, G2Point calldata message) external returns (bool);
-  function aggregate_keys(G2Point[] calldata keys) external returns (bytes32[2] memory);
+  function aggregate_keys(G1Point[] calldata keys) external returns (G1Point memory);
 }
 
 contract BLSVerifierTest is Test {
@@ -47,6 +47,59 @@ contract BLSVerifierTest is Test {
       y2: bytes32(uint(775312196554192280950380277344680275774623638426543529866173776909529919076))
     });
 
+    do_assembly(public_key, signature, message);
     assert(verifier.verify_signature(signature, public_key, message));
+  }
+
+  function testKeyAggregation() public {
+    BLSVerifier.G1Point memory key1 = BLSVerifier.G1Point({
+      x: bytes32(uint(1090777408308035171260661852075567960976181687143889499564710305988172099383)),
+      y: bytes32(uint(13708458844252250126192960376690702041965617131164989573508273531198210365093))
+    });
+
+    BLSVerifier.G1Point memory key2 = BLSVerifier.G1Point({
+      x: bytes32(uint(11881449464937159101117024659363687494872315528007582811501480871933345074711)),
+      y: bytes32(uint(19083420831100400159359017294063270822724141549886334410284262730115949163197))
+    });
+
+    BLSVerifier.G1Point memory aggregate = BLSVerifier.G1Point({
+      x: bytes32(uint(3939382406067771344226740034796377045918229522930233858096086618319397357565)),
+      y: bytes32(uint(9924489154303082400633333244542122933302611311517435407379471759643632700555))
+    });
+
+    BLSVerifier.G1Point[] memory keys = new BLSVerifier.G1Point[](2);
+    keys[0] = key1;
+    keys[1] = key2;
+    BLSVerifier.G1Point memory result = verifier.aggregate_keys(keys);
+    assertEq(aggregate.x, result.x);
+    assertEq(aggregate.y, result.y);
+  }
+
+  function do_assembly(BLSVerifier.G1Point memory g1, BLSVerifier.G2Point memory g2, BLSVerifier.G2Point memory message) public {
+    bytes32[12] memory input;
+    input[0] = bytes32(uint(1));
+    input[1] = bytes32(uint(2));
+    input[2] = g2.x2;
+    input[3] = g2.x1;
+    input[4] = g2.y2;
+    input[5] = g2.y1;
+
+    input[6] = g1.x;
+    input[7] = g1.y;
+    input[8] = message.x2;
+    input[9] = message.x1;
+    input[10] = message.y2;
+    input[11] = message.y1;
+
+    assembly {
+      if iszero(
+        staticcall(not(0), 0x08, input, 0x0180, input, 0x20)
+      ) {
+        revert(0, 0)
+      }
+    }
+
+    console.log("ASSEMBLY RET");
+    console.log(uint(input[0]));
   }
 }

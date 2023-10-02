@@ -2,6 +2,7 @@
 //!
 //! This library provides functions to verify BLS signatures
 //! Due to the limitation of EVM ec precompiles, we cannot perform the message hashing on-chain
+#include "../lib/Huff-Console/src/Console.huff"
 
 #define error PairingFailed()
 
@@ -105,7 +106,7 @@
 
         // Load the next key
         dup1            // [counter, counter, num_keys, mem_ptr]
-        0x20 mul        // [counter*0x20, counter, num_keys, mem_ptr]
+        0x40 mul        // [counter*0x20, counter, num_keys, mem_ptr]
         dup4            // [mem_ptr, counter, counter, num_keys, mem_ptr]
         add             // [key_i_ptr_x, counter, num_keys, mem_ptr]
         dup1            // [key_i_ptr_x, key_i_ptr_x, counter, num_keys, mem_ptr]

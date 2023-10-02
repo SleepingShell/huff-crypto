@@ -2,6 +2,7 @@
 //!
 //! This contract provides exposed methods to verify an aggregated BLS signature
 #include "./LibBLSVerify.huff"
+#include "../lib/Huff-Console/src/Console.huff"
 
 /// Function definitions
 // This method verifies a BLS signature on the given `message`. NOTE that `message` is the actual signed point,
@@ -11,7 +12,7 @@
 
 // Unfortunately Huff cannot handle struct function definitions. Therefore we must set the selector manually
 #define constant _SIG_VERIFY_SIGNATURE = 0xdb002362
-#define constant _SIG_AGGREGATE_KEYS = 0x01
+#define constant _SIG_AGGREGATE_KEYS = 0x2e7039e1
 
 /// ## Main
 ///
@@ -20,7 +21,7 @@
     0x00 calldataload 0xE0 shr            // [func_sig]
 
     dup1 [_SIG_VERIFY_SIGNATURE] eq verify_sig jumpi
-    dup1 __FUNC_SIG(aggregate_keys) eq aggregate_keys jumpi
+    dup1 [_SIG_AGGREGATE_KEYS] eq aggregate_keys jumpi
 
     0x00 0x00 return // Fallback
 
