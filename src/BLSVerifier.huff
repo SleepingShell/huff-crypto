@@ -6,9 +6,12 @@
 //#include "../lib/Huff-Console/src/Console.huff"
 
 /// Function definitions
+
 // This method verifies a BLS signature on the given `message`. NOTE that `message` is the actual signed point,
 //  NOT the preimage to the hash normally used in BLS
 //#define function verify_signature(bytes32[4] signature, bytes32[2] public_key, bytes32[4] message) nonpayable returns (bool)
+
+// This function adds all passed keys into a single aggregated key
 //#define function aggregate_keys(bytes32[2][] keys) nonpayable returns (bytes32[2])
 
 // Unfortunately Huff cannot handle struct function definitions. Therefore we must set the selector manually
