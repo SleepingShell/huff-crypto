@@ -99,7 +99,6 @@
 #define macro AGGREGATE_KEYS() = takes(2) returns (0) {
     // takes:           // [mem_ptr, num_keys]
     swap1               // [num_keys, mem_ptr]
-    //dup2                // [mem_ptr, num_keys, mem_ptr]
     0x01                // [counter, num_keys, mem_ptr]
 
     loop:               // [counter, num_keys, mem_ptr]
@@ -149,10 +148,5 @@
     0x00 0x00 revert
 
     done:               // [counter, num_keys, mem_ptr]
-        // pop pop         // [mem_ptr]
-        // dup1            // [mem_ptr, mem_ptr]
-        // 0x20 add        // [mem_ptr+0x20, mem_ptr]
-        // mload           // [aggregated_y, mem_ptr]
-        // swap1           // [mem_ptr, aggregated_y]
-        // mload           // [aggregated_x, aggregated_y]
+        pop pop pop     // []
 }
