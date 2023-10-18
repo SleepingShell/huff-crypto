@@ -3,8 +3,6 @@
 //! This library provides functions to verify BLS signatures
 //! Due to the limitation of EVM ec precompiles, we cannot perform the message hashing on-chain
 
-//#include "../lib/Huff-Console/src/Console.huff"
-
 #define error PairingFailed()
 
 /// The NEGATED generator point for G_1
@@ -52,7 +50,6 @@
 /// Since the precompile checks that all arguments multiplied together equal 0, we do:
 ///     e(-G1, signature) * e(pubkey, signed_point) == 0
 ///
-///
 /// RETURNS: whether the pairing was valid (and bubbles up if it reverts)
 #define macro BLS_VERIFY() = takes (1) returns (1) {
     // takes:           // [bls_mem_ptr]
@@ -81,8 +78,8 @@
     0x00 mstore             // [-]
     0x20 0x00 revert        // Revert
 
-    valid_call:      // [bls_mem_ptr]
-        mload           // [pairing_success?]
+    valid_call:     // [bls_mem_ptr]
+        mload       // [pairing_success?]
 }
 
 /// ## Public Key Aggregation

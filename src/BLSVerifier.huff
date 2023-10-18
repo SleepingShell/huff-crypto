@@ -3,8 +3,6 @@
 //! This contract provides exposed methods to verify an aggregated BLS signature
 #include "./LibBLSVerify.huff"
 
-//#include "../lib/Huff-Console/src/Console.huff"
-
 /// Function definitions
 // Unfortunately Huff cannot handle struct function definitions. Therefore we must set the selector manually
 #define constant _SIG_VERIFY_SIGNATURE = 0xdb002362
